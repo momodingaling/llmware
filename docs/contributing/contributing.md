@@ -1,11 +1,12 @@
 ---
 layout: default
 title: Contributing
-nav_order: 10
+nav_order: 7
 has_children: true
 description: llmware contributions.
 permalink: /contributing
 ---
+
 # Contributing to llmware
 
 {: .note}

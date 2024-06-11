@@ -1,7 +1,25 @@
+# Copyright 2023-2024 llmware
+
+# Licensed under the Apache License, Version 2.0 (the "License"); you
+# may not use this file except in compliance with the License.  You
+# may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.  See the License for the specific language governing
+# permissions and limitations under the License.
+
+
 """Global Default Configs for Models, Finetune Wrappers and Prompt Instructions Catalog.
 
-These configs generally do not need to be accessed directly, but can be viewed and updated through
+These configs generally do not need to be accessed directly, but can be viewed, accessed and modified through
 ModelCatalog and PromptCatalog classes.
+
+For customization, there is also the option in ModelCatalog to load a custom model catalog from json file, which
+would over-write this list.
 """
 
 global_model_repo_catalog_list = [
@@ -70,7 +88,23 @@ global_model_repo_catalog_list = [
    "link": "https://huggingface.co/jinaai/jina-embeddings-v2-small-en", "custom_model_files": [], "custom_model_repo": "",
    "hf_repo": "jinaai/jina-embeddings-v2-small-en"},
 
-  {"model_name": 'BAAI/bge-small-en-v1.5', "display_name": "bge-small-en-v1.5", "model_family": "HFEmbeddingModel",
+  # new add - reranker models
+  {"model_name": 'jinaai/jina-reranker-v1-turbo-en', "display_name": "jina-reranker-turbo",
+  "model_family": "HFReRankerModel",
+  "model_category": "reranker", "model_location": "hf_repo", "embedding_dims": 384, "context_window": 8192,
+  "link": "https://huggingface.co/jinaai/jina-reranker-v1-turbo-en", "custom_model_files": [],
+  "custom_model_repo": "",
+  "hf_repo": "jinaai/jina-reranker-v1-turbo-en"},
+
+ {"model_name": 'jinaai/jina-reranker-v1-tiny-en', "display_name": "jina-reranker-tiny",
+  "model_family": "HFReRankerModel",
+  "model_category": "reranker", "model_location": "hf_repo", "embedding_dims": 384, "context_window": 8192,
+  "link": "https://huggingface.co/jinaai/jina-reranker-v1-tiny-en", "custom_model_files": [],
+  "custom_model_repo": "",
+  "hf_repo": "jinaai/jina-reranker-v1-tiny-en"},
+  # end - reranker models
+
+ {"model_name": 'BAAI/bge-small-en-v1.5', "display_name": "bge-small-en-v1.5", "model_family": "HFEmbeddingModel",
    "model_category": "embedding", "model_location": "hf_repo", "embedding_dims": 384, "context_window": 512,
    "link": "https://huggingface.co/BAAI/bge-small-en-v1.5", "custom_model_files": [], "custom_model_repo": "",
    "hf_repo": "BAAI/bge-small-en-v1.5"},
@@ -241,9 +275,13 @@ global_model_repo_catalog_list = [
     {"model_name": "gpt-3.5-turbo-0125", "display_name": "GPT-3.5-Turbo-0125", "model_family": "OpenAIGenModel",
      "model_category": "generative-api", "model_location": "api", "context_window": 16385},
 
-    # generative AIB models - aib-read-gpt - "main model"
-    {"model_name": "aib-read-gpt", "display_name": "AIB-READ-GPT", "model_family": "AIBReadGPTModel",
-     "model_category": "generative-api", "model_location": "api", "context_window": 2048},
+    # gpt-4o model announced in May 2024
+    {"model_name": "gpt-4o", "display_name": "GPT-4o", "model_family": "OpenAIGenModel",
+     "model_category": "generative-api", "model_location": "api", "context_window": 128000},
+
+    # gpt-4o-2024-0513 model announced in May 2024
+    {"model_name": "gpt-4o-2024-05-13", "display_name": "gpt-4o-2024-05-13", "model_family": "OpenAIGenModel",
+     "model_category": "generative-api", "model_location": "api", "context_window": 128000},
 
     # base supporting models and components
     {"model_name": "bert", "display_name": "Bert", "model_family": "BaseModel", "model_category": "base",
@@ -1112,7 +1150,136 @@ global_model_repo_catalog_list = [
      "function_call": True, "primary_keys": ["key points (3)"], "fc_output_values": [],
      "tokenizer": "llmware/slim-extract",
      "tokenizer_local": "tokenizer_stablelm.json",
-     "marker_tokens": [], "marker_token_lookup": {}, "function": ["summarize"], "snapshot": True}
+     "marker_tokens": [], "marker_token_lookup": {}, "function": ["summarize"], "snapshot": True},
+
+    # adding new slim q-gen models
+    {"model_name": "slim-q-gen-phi-3-tool", "display_name": "slim-q-gen-tool",
+     "model_family": "GGUFGenerativeModel", "model_category": "generative_local", "model_location": "llmware_repo",
+     "context_window": 4096, "instruction_following": False, "prompt_wrapper": "human_bot",
+     "temperature": 0.3, "sample_default": True, "trailing_space": "",
+     "gguf_file": "q_gen.gguf",
+     "gguf_repo": "llmware/slim-q-gen-phi-3-tool",
+     "link": "https://huggingface.co/llmware/slim-q-gen-phi-3-tool",
+     "custom_model_files": [], "custom_model_repo": "",
+     "output_type": "dict",
+     "function_call": True,
+     "primary_keys": ["question"],
+     "fc_output_values": [],
+     "tokenizer": "microsoft/Phi-3-mini-4k-instruct",
+     "tokenizer_local": "tokenizer_phi3.json",
+     "marker_tokens": [], "marker_token_lookup": {},
+     "function": ["generate"],
+     "snapshot": True},
+
+    {"model_name": "slim-q-gen-tiny-tool", "display_name": "llmware/slim-q-gen-tiny-tool",
+     "model_family": "GGUFGenerativeModel", "model_category": "generative_local", "model_location": "llmware_repo",
+     "context_window": 4096, "instruction_following": False, "prompt_wrapper": "human_bot",
+     "temperature": 0.5, "sample_default": True, "trailing_space": "",
+     "gguf_file": "q_gen.gguf",
+     "gguf_repo": "llmware/slim-q-gen-tiny-tool",
+     "link": "https://huggingface.co/slim-q-gen-tiny-tool",
+     "custom_model_files": [], "custom_model_repo": "",
+     "output_type": "dict",
+     "function_call": True,
+     "primary_keys": ["question"],
+     "fc_output_values": [],
+     "tokenizer": "llmware/slim-sentiment",
+     "tokenizer_local": "tokenizer_tl.json",
+     "marker_tokens": [], "marker_token_lookup": {},
+     "function": ["generate"],
+     "snapshot": True},
+
+    {"model_name": "llmware/slim-q-gen-tiny", "display_name": "slim-q-gen-tiny",
+     "model_family": "HFGenerativeModel", "model_category": "generative_local", "model_location": "hf_repo",
+     "context_window": 2048, "instruction_following": False, "prompt_wrapper": "human_bot",
+     "temperature": 0.5, "sample_default": True, "trailing_space": "", "gguf_file": "", "gguf_repo": "",
+     "link": "https://huggingface.co/llmware/slim-q-gen-tiny",
+     "hf_repo": "llmware/slim-q-gen-tiny",
+     "custom_model_files": [""], "custom_model_repo": "",
+     "output_type": "dict", "function_call": True,
+     "primary_keys": ["question"],
+     "fc_output_values": ["question"],
+     "marker_tokens": [],
+     "marker_token_lookup": {},
+     "function": ["generate"]},
+
+    {"model_name": "llmware/slim-q-gen-phi-3", "display_name": "slim-q-gen-phi-3",
+     "model_family": "HFGenerativeModel", "model_category": "generative_local", "model_location": "hf_repo",
+     "context_window": 2048, "instruction_following": False, "prompt_wrapper": "human_bot",
+     "temperature": 0.5, "sample_default": True, "trailing_space": "", "gguf_file": "", "gguf_repo": "",
+     "link": "https://huggingface.co/llmware/slim-q-gen-phi-3",
+     "hf_repo": "llmware/slim-q-gen-phi-3",
+     "custom_model_files": [""], "custom_model_repo": "",
+     "output_type": "dict", "function_call": True,
+     "primary_keys": ["question"],
+     "fc_output_values": ["question"],
+     "marker_tokens": [],
+     "marker_token_lookup": {},
+     "function": ["generate"]},
+
+     {"model_name": "slim-qa-gen-tiny-tool", "display_name": "llmware/slim-qa-gen-tiny-tool",
+      "model_family": "GGUFGenerativeModel", "model_category": "generative_local", "model_location": "llmware_repo",
+      "context_window": 4096, "instruction_following": False, "prompt_wrapper": "human_bot",
+      "temperature": 0.5, "sample_default": True, "trailing_space": "",
+      "gguf_file": "qa_gen_v3.gguf",
+      "gguf_repo": "llmware/slim-qa-gen-tiny-tool",
+      "link": "https://huggingface.co/slim-qa-gen-tiny-tool",
+      "custom_model_files": [], "custom_model_repo": "",
+      "output_type": "dict",
+      "function_call": True,
+      "primary_keys": ["question, answer"],    # also accepts boolean and multiple choice
+      "fc_output_values": [],
+      "tokenizer": "llmware/slim-sentiment",
+      "tokenizer_local": "tokenizer_tl.json",
+      "marker_tokens": [], "marker_token_lookup": {},
+      "function": ["generate"],
+      "snapshot": True},
+
+    {"model_name": "slim-qa-gen-phi-3-tool", "display_name": "slim-qa-gen-phi-3-tool",
+     "model_family": "GGUFGenerativeModel", "model_category": "generative_local", "model_location": "llmware_repo",
+     "context_window": 4096, "instruction_following": False, "prompt_wrapper": "human_bot",
+     "temperature": 0.3, "sample_default": True, "trailing_space": "",
+     "gguf_file": "qa_gen_v3.gguf",
+     "gguf_repo": "llmware/slim-qa-gen-phi-3-tool",
+     "link": "https://huggingface.co/llmware/slim-qa-gen-phi-3-tool",
+     "custom_model_files": [], "custom_model_repo": "",
+     "output_type": "dict",
+     "function_call": True,
+     "primary_keys": ["question, answer"],    # also accepts boolean and multiple choice
+     "fc_output_values": [],
+     "tokenizer": "microsoft/Phi-3-mini-4k-instruct",
+     "tokenizer_local": "tokenizer_phi3.json",
+     "marker_tokens": [], "marker_token_lookup": {},
+     "function": ["generate"],
+     "snapshot": True},
+
+     {"model_name": "llmware/slim-qa-gen-tiny", "display_name": "slim-qa-gen-tiny",
+      "model_family": "HFGenerativeModel", "model_category": "generative_local", "model_location": "hf_repo",
+      "context_window": 2048, "instruction_following": False, "prompt_wrapper": "human_bot",
+      "temperature": 0.5, "sample_default": True, "trailing_space": "", "gguf_file": "", "gguf_repo": "",
+      "link": "https://huggingface.co/llmware/slim-qa-gen-tiny",
+      "hf_repo": "llmware/slim-qa-gen-tiny",
+      "custom_model_files": [""], "custom_model_repo": "",
+      "output_type": "dict", "function_call": True,
+      "primary_keys": ["question, answer"],
+      "fc_output_values": ["question, answer"],
+      "marker_tokens": [],
+      "marker_token_lookup": {},
+      "function": ["generate"]},
+
+     {"model_name": "llmware/slim-qa-gen-phi-3", "display_name": "slim-qa-gen-phi-3",
+      "model_family": "HFGenerativeModel", "model_category": "generative_local", "model_location": "hf_repo",
+      "context_window": 2048, "instruction_following": False, "prompt_wrapper": "human_bot",
+      "temperature": 0.5, "sample_default": True, "trailing_space": "", "gguf_file": "", "gguf_repo": "",
+      "link": "https://huggingface.co/llmware/slim-qa-gen-phi-3",
+      "hf_repo": "llmware/slim-qa-gen-phi-3",
+      "custom_model_files": [""], "custom_model_repo": "",
+      "output_type": "dict", "function_call": True,
+      "primary_keys": ["question, answer"],
+      "fc_output_values": ["question, answer"],
+      "marker_tokens": [],
+      "marker_token_lookup": {},
+      "function": ["generate"]}
 
 ]
 

@@ -1,4 +1,4 @@
-# Copyright 2023 llmware
+# Copyright 2023-2024 llmware
 
 # Licensed under the Apache License, Version 2.0 (the "License"); you
 # may not use this file except in compliance with the License.  You
@@ -11,10 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 # implied.  See the License for the specific language governing
 # permissions and limitations under the License.
-"""The resources module implements the text index databases that are used in conjunction with the vector
-databases.
 
-Currently, llmware supports MongoDB, Postgres, and SQLite as text index databases.
+"""The resources module implements the text index databases that are used as the foundation for creating a
+Library in LLMWare, and a wide range of supporting methods, including text query retrieval, library card
+ management, tracking of embedding progress and status, and the ability to create custom tables.  The text index
+ is used as the 'master' source of aggregating and access unstructured information that has been parsed and
+ organized into Library collections.
+
+Currently, llmware supports MongoDB, Postgres, and SQLite as text index databases, and supports the use of both
+Postgres and SQLIte for creation of custom (SQL) tables.
+
 """
 
 import platform
@@ -59,6 +65,9 @@ try:
     import psycopg
 except ImportError:
     pass
+
+logger = logging.getLogger(__name__)
+logger.setLevel(level=LLMWareConfig().get_logging_level_by_module(__name__))
 
 
 class CollectionRetrieval:
@@ -363,7 +372,7 @@ class MongoWriter:
             self.collection.drop()
             return 1
 
-        logging.warning("update: library not destroyed - need to set confirm_destroy = True")
+        logger.warning("update: library not destroyed - need to set confirm_destroy = True")
         return 0
 
     def update_block (self, doc_id, block_id, key, new_value, default_keys):
@@ -480,9 +489,10 @@ class MongoWriter:
 
                                 if emb_records["embedded_blocks"] > update_dict["embedding"]["embedded_blocks"]:
 
-                                    logging.warning("warning: may be issue with embedding - mis-alignment in "
-                                                    "embedding block count - %s > %s ", emb_records["embedded_blocks"],
-                                                    update_dict["embedding"]["embedded_blocks"])
+                                    logger.warning(f"warning: may be issue with embedding - mis-alignment in "
+                                                   f"embedding block count - "
+                                                   f"{emb_records['embedded_blocks']} > "
+                                                   f"{update_dict['embedding']['embedded_blocks']}")
 
                     else:
                         inserted_list.append(emb_records)
@@ -590,13 +600,14 @@ class MongoRetrieval:
             # catch if mongo not available
             with pymongo.timeout(timeout_secs):
                 client.admin.command('ping')
-                logging.info("update: mongo connected - collection db available at uri string - %s ", self.uri_string)
+                logger.info(f"update: mongo connected - collection db available at uri string - "
+                            f"{self.uri_string}")
                 db_status = True
 
         except ConnectionFailure:
-            logging.warning("warning:  collection db not found at uri string in LLMWareConfig - %s - check "
-                            "connection and/or reset LLMWareConfig 'collection_db_uri' to point to the correct uri.",
-                            self.uri_string)
+            logger.warning(f"warning:  collection db not found at uri string in LLMWareConfig - "
+                           f"{self.uri_string} - check connection and/or reset LLMWareConfig 'collection_db_uri' "
+                           f"to point to the correct uri.")
 
             db_status = False
 
@@ -625,7 +636,7 @@ class MongoRetrieval:
             try:
                 value = ObjectId(value)
             except:
-                logging.info("update: mongo lookup - could not find _id into ObjectID - %s", value)
+                logger.debug(f"update: mongo lookup - could not find _id into ObjectID - {value}")
                 value = value
 
         target = list(self.collection.find({key:value}))
@@ -949,7 +960,7 @@ class PGRetrieval:
                         new_dict.update({key: row[counter]})
                         counter += 1
                     else:
-                        logging.warning("update: pg_retriever - outputs not matching - %s", counter)
+                        logger.warning(f"update: pg_retriever - outputs not matching - {counter}")
 
             output.append(new_dict)
 
@@ -979,7 +990,7 @@ class PGRetrieval:
                         new_dict.update({key: row[counter]})
                         counter += 1
                     else:
-                        logging.warning ("update: pg_retriever - outputs not matching - %s ", counter)
+                        logger.warning (f"update: pg_retriever - outputs not matching - {counter}")
 
             output.append(new_dict)
 
@@ -1008,13 +1019,9 @@ class PGRetrieval:
         output = []
         value = str(value)
 
-        # print("update: embedding_key_lookup - ", key, value)
-
         sql_query= f"SELECT * FROM {self.library_name} WHERE embedding_flags->>'{key}' = '{value}'"
 
         results = list(self.conn.cursor().execute(sql_query))
-
-        # print("update: lookup results - ", results)
 
         if results:
             if len(results) >= 1:
@@ -1164,11 +1171,7 @@ class PGRetrieval:
         sql_query += " ORDER BY rank"
         sql_query += ";"
 
-        # print("update: postgres - sql_query - ", sql_query)
-
         results = self.conn.cursor().execute(sql_query)
-
-        # for x in results: print("update: postgres - results - ", x)
 
         output_results = self.unpack_search_result(results)
 
@@ -1240,7 +1243,9 @@ class PGRetrieval:
             if isinstance(value,dict):
                 if "$in" in value:
                     value = value["$in"]
-                    print("updated value: ", value)
+
+                    logger.debug(f"update: Postgres - filter_by_key_dict - value - {value}")
+
                     if isinstance(value,list):
                         v_str = "("
                         for entry in value:
@@ -1353,8 +1358,6 @@ class PGRetrieval:
 
         self.conn.close()
 
-        # print("update: count_embedded_blocks - pg - final output - ", embedded_blocks)
-
         return embedded_blocks
 
     def count_documents(self, filter_dict):
@@ -1378,8 +1381,6 @@ class PGRetrieval:
         results = list(self.conn.cursor().execute(sql_query))
 
         output = results[0]
-
-        # print("results - ", output)
 
         self.conn.close()
 
@@ -1512,7 +1513,6 @@ class PGWriter:
 
         if len(test_result) > 0:
             if table_name in test_result[0]:
-                # print("update: pgconnect - test table - evaluates to True")
                 build_table = False
 
         # self.conn.close()
@@ -1636,16 +1636,23 @@ class PGWriter:
 
             sql_instruction = f"DROP TABLE {self.library_name};"
 
-            results = self.conn.cursor().execute(sql_instruction)
-            self.conn.commit()
-            self.conn.close()
+            #   returns TRUE if table does not exist & FALSE if table exists
+            table_does_not_exist = self.check_if_table_build_required()
 
-            return 1
+            #   if FALSE ... drop the table
+            if not table_does_not_exist:
+                results = self.conn.cursor().execute(sql_instruction)
+                self.conn.commit()
+                self.conn.close()
+                return 1
+            else:
+                logger.warning(f"update: PGWriter - request to drop table not executed because table "
+                               f"could not be found in the database.")
+                return -1
 
-        logging.warning("update: library not destroyed - need to set confirm_destroy = True")
+        logger.warning("update: library not destroyed - need to set confirm_destroy = True")
 
-        self.conn.commit()
-
+        # self.conn.commit()
         self.conn.close()
 
         return 0
@@ -1746,8 +1753,6 @@ class PGWriter:
 
         conditions_clause = f"library_name = '{library_name}'"
 
-        # print("update dict - items - ", update_dict.items())
-
         update_embedding_record = False
         insert_array = ()
 
@@ -1822,9 +1827,9 @@ class PGWriter:
 
                             if emb_records["embedded_blocks"] > new_value["embedded_blocks"]:
 
-                                logging.warning("warning: may be issue with embedding - mis-alignment in "
-                                                "embedding block count - %s > %s ", emb_records["embedded_blocks"],
-                                                new_value["embedded_blocks"])
+                                logger.warning(f"warning: may be issue with embedding - mis-alignment in "
+                                                f"embedding block count - "
+                                               f"{emb_records['embedded_blocks']} > {new_value['embedded_blocks']}")
 
                 else:
                     inserted_list.append(emb_records)
@@ -1904,8 +1909,6 @@ class PGWriter:
                       f"SET embedding_flags = coalesce(embedding_flags, 'XY') || %s WHERE _id = {_id}"
         sql_command = sql_command.replace("X","{")
         sql_command = sql_command.replace("Y","}")
-
-        # print("sql_command - ", sql_command)
 
         self.conn.cursor().execute(sql_command, insert_array)
         self.conn.commit()
@@ -2024,7 +2027,7 @@ class SQLiteRetrieval:
                         counter += 1
 
                     else:
-                        logging.warning("update: sqlite_retriever - outputs not matching - %s ", counter)
+                        logger.warning(f"update: sqlite_retriever - outputs not matching -{counter}")
 
             output.append(new_dict)
 
@@ -2063,7 +2066,7 @@ class SQLiteRetrieval:
                         counter += 1
 
                     else:
-                        logging.warning("update: sqlite_retriever - outputs not matching - %s", counter)
+                        logger.warning(f"update: sqlite_retriever - outputs not matching - {counter}")
 
             output.append(new_dict)
 
@@ -2096,15 +2099,11 @@ class SQLiteRetrieval:
 
         value = str(value)
 
-        # print("update: embedding_key_lookup - ", key, value)
-
         # lookup embedding_flag = value and value in special_field1
         sql_command = (f"SELECT rowid, * FROM {self.library_name} WHERE embedding_flags = '{key}' AND "
                        f"special_field1 = '{value}'")
 
         results = list(self.conn.cursor().execute(sql_command))
-
-        # print("results: ", results)
 
         if len(results) > 0:
             output = self.unpack(results)
@@ -2245,8 +2244,6 @@ class SQLiteRetrieval:
 
         sql_query += ";"
 
-        # print("update: sqlite - query - ", sql_query, ia_str)
-
         results = self.conn.cursor().execute(sql_query)
         output = self.unpack_search_result(results)
 
@@ -2327,7 +2324,9 @@ class SQLiteRetrieval:
             if isinstance(value,dict):
                 if "$in" in value:
                     value = value["$in"]
-                    print("updated value: ", value)
+
+                    logger.debug(f"update: SQLite - filter_by_key_dict - value - {value}")
+
                     if isinstance(value,list):
                         v_str = "("
                         for entry in value:
@@ -2349,8 +2348,6 @@ class SQLiteRetrieval:
 
         if len(conditions_clause) > len(" WHERE"):
             sql_query += conditions_clause + ";"
-
-        # print("TEST: sql query - ", sql_query)
 
         results = self.conn.cursor().execute(sql_query)
 
@@ -2424,8 +2421,6 @@ class SQLiteRetrieval:
             results = list(self.conn.cursor().execute(sql_query))
             count = results[0]
 
-            # print("update: sqlite_retriever - get_embedding_cursor - count - results - ", results, new_embedding_key)
-
             sql_query = f"SELECT rowid, * FROM {self.library_name} WHERE embedding_flags IS NULL OR " \
                         f"embedding_flags != '{new_embedding_key}';"
 
@@ -2446,8 +2441,6 @@ class SQLiteRetrieval:
         results = list(self.conn.cursor().execute(sql_query))
 
         embedded_blocks = results[0]
-
-        # print("update: sqlite_retrieval - count embedded blocks -", embedded_blocks, results)
 
         self.conn.close()
 
@@ -2748,12 +2741,22 @@ class SQLiteWriter:
         if confirm_destroy:
 
             sql_instruction = f"DROP TABLE {self.library_name};"
-            results = self.conn.cursor().execute(sql_instruction)
-            self.conn.commit()
-            self.conn.close()
-            return 1
 
-        logging.warning("update: library not destroyed - need to set confirm_destroy = True")
+            #   returns TRUE if table does not exist & FALSE if table exists
+            table_does_not_exist = self.check_if_table_build_required()
+
+            #   if FALSE ... drop the table
+            if not table_does_not_exist:
+                results = self.conn.cursor().execute(sql_instruction)
+                self.conn.commit()
+                self.conn.close()
+                return 1
+            else:
+                logger.warning(f"update: SQLiteWriter - request to drop table not executed because table "
+                               f"could not be found in the database.")
+                return -1
+
+        logger.warning("update: library not destroyed - need to set confirm_destroy = True")
         self.conn.close()
 
         return 0
@@ -2920,9 +2923,9 @@ class SQLiteWriter:
                         if "embedded_blocks" in emb_records and "embedded_blocks" in new_value:
 
                             if emb_records["embedded_blocks"] > new_value["embedded_blocks"]:
-                                logging.warning("warning: may be issue with embedding - mis-alignment in "
-                                                "embedding block count - %s > %s ", emb_records["embedded_blocks"],
-                                                new_value["embedded_blocks"])
+                                logger.warning(f"warning: may be issue with embedding - mis-alignment in "
+                                               f"embedding block count - {emb_records['embedded_blocks']} > "
+                                               f"{new_value['embedded_blocks']}")
 
                 else:
                     inserted_list.append(emb_records)
@@ -3147,15 +3150,12 @@ class DBCursor:
 
         try:
             new_row = next(self.cursor)
-            # print("update: DBCursor - new_row - ", new_row)
 
         except StopIteration:
             # The cursor is empty (no blocks found)
             new_row = None
             if self.close_when_exhausted:
                 self.collection_retriever.close()
-
-        # print("cursor - pull one - ", new_row)
 
         if new_row and self.return_dict and not isinstance(new_row,dict):
             return self.collection_retriever.unpack([new_row])[0]
@@ -3213,7 +3213,7 @@ class CustomTable:
         if table_name not in self.reserved_tables:
             self.table_name = table_name
         else:
-            logging.warning(
+            logger.warning(
                 f"error: proposed custom table name - {table_name} - is a reserved table name and can not be used.  "
                 f"self.table_name is being set to None, and will need to be set to a different name before using.")
 
@@ -3278,12 +3278,12 @@ class CustomTable:
                 completed = True
 
             else:
-                logging.warning(f"warning: could not successfully remediate schema - there is an issue with the "
-                                f"current schema - please review and adjust.")
+                logger.warning(f"warning: could not successfully remediate schema - there is an issue with the "
+                               f"current schema - please review and adjust.")
                 complete = False
 
         else:
-            logging.warning(f"warning: could not build_table since missing either table name, schema or both - "
+            logger.warning(f"warning: could not build_table since missing either table name, schema or both - "
                             f"table_name = {self.table_name} - schema = {self.schema}")
             completed = False
 
@@ -3310,8 +3310,8 @@ class CustomTable:
 
         for k, v in self.schema.items():
             if k in self.reserved_col_names:
-                logging.warning(f"warning: schema column name - {k} - in reserved column names list - will need to "
-                                f"change before creating table.")
+                logger.warning(f"warning: schema column name - {k} - in reserved column names list - will need to "
+                               f"change before creating table.")
                 updated_schema.update({k+self.postpend: v})
                 remediated_keys.append(k)
                 confirmation = False
@@ -3423,8 +3423,8 @@ class CustomTable:
             for x in range(0,samples):
 
                 if key not in self.rows[x]:
-                    logging.warning("warning:  CustomTable - test_and_remediate_schema - unexpected error - "
-                                    "key not found in row - ", x, key, self.rows[x])
+                    logger.warning(f"warning:  CustomTable - test_and_remediate_schema - unexpected error - "
+                                   f"key not found in row - {x} - {key} - {self.rows[x]}")
                 else:
                     check_value = self.rows[x][key]
                     samples_dt_list.append(self._get_best_guess_value_type(check_value))
@@ -3536,8 +3536,8 @@ class CustomTable:
                     new_row.update({k:v})
 
             if len(new_row.items()) != column_size:
-                logging.warning(f"warning: on line - {x} - extracted elements - {len(new_row.items())} - does "
-                                f"not map to the target column size - {column_size} - skipping row - {new_row}.")
+                logger.warning(f"warning: on line - {x} - extracted elements - {len(new_row.items())} - does "
+                               f"not map to the target column size - {column_size} - skipping row - {new_row}.")
                 skipped_rows.append([x, json_rows[x]])
 
             else:
@@ -3631,7 +3631,7 @@ class CustomTable:
         match_percent = col_count_tracker[most_common_column] / total_rows
 
         if len(col_count_tracker.items()) > 1:
-            logging.warning("warning: found more than one length - ", col_count_tracker)
+            logger.warning(f"warning: found more than one length - {col_count_tracker}")
 
             for x in range(0,total_rows):
                 row_elements = len(json_rows[x].items())
@@ -3677,8 +3677,8 @@ class CustomTable:
         match_percent = col_count_tracker[most_common_column] / total_rows
 
         if len(col_count_tracker.items()) > 1:
-            logging.warning("warning: CustomTable - validate_csv - in reviewing the rows of the CSV - "
-                            "found more than one column length - ", col_count_tracker)
+            logger.warning(f"warning: CustomTable - validate_csv - in reviewing the rows of the CSV - "
+                           f"found more than one column length - {col_count_tracker}")
 
             for x in range(0,total_rows):
                 row_elements = len(output[x])
@@ -3810,10 +3810,10 @@ class CustomTable:
 
             if (len(output[x]) != column_size and not column_mapping_dict) or (required_column_count and
                                                                                len(output[x] != required_column_count)):
-                logging.warning(f"warning: line - {x} - has {len(output[x])} elements, and does not match the "
-                                f"number of columns in the schema - {column_size} - or specified in "
-                                f"required_column_count - {required_column_count} -  for safety, this row is being "
-                                f"skipped.")
+                logger.warning(f"warning: line - {x} - has {len(output[x])} elements, and does not match the "
+                               f"number of columns in the schema - {column_size} - or specified in "
+                               f"required_column_count - {required_column_count} -  for safety, this row is being "
+                               f"skipped.")
                 skipped_rows.append([x,output[x]])
 
             else:
@@ -3827,7 +3827,7 @@ class CustomTable:
                         new_row.update({column_map_inverted[i]: entry})
 
                 if len(new_row.items()) != column_size:
-                    logging.warning(f"warning: on line - {x} - extracted elements - {len(new_row.items())} - does "
+                    logger.warning(f"warning: on line - {x} - extracted elements - {len(new_row.items())} - does "
                                     f"not map to the target column size - {column_size} - skipping row.")
                 else:
                     self.rows.append(new_row)
@@ -3920,14 +3920,14 @@ class CustomTable:
 
                 if i >= 100 and i % 100 == 0:
 
-                    # TODO:  more config options on display of output status and logging
-                    print(f"update: CustomTable - insert_rows - status - rows loaded - {i} - out of {len(self.rows)}")
+                    logger.info(f"update: CustomTable - insert_rows - status - rows loaded - "
+                                f"{i} - out of {len(self.rows)}")
 
                 try:
                     self.write_new_record(self.rows[i])
                 except:
-                    logging.warning(f"warning: write transaction not successful - skipping row - "
-                                    f"{i} - {self.rows[i]}")
+                    logger.warning(f"warning: write transaction not successful - skipping row - "
+                                   f"{i} - {self.rows[i]}")
 
                 rows_completed += 1
 
@@ -4004,8 +4004,8 @@ class CustomTable:
         try:
             response = conn.direct_custom_query(custom_filter)
         except:
-            logging.warning(f"warning: query was not successful - {str(custom_filter)} - and generated an error "
-                            f"when attempting to run on table - {self.table_name} - database - {self.db}. ")
+            logger.warning(f"warning: query was not successful - {str(custom_filter)} - and generated an error "
+                           f"when attempting to run on table - {self.table_name} - database - {self.db}. ")
             response = []
 
         return response
@@ -4123,7 +4123,7 @@ class CloudBucketManager:
             downloaded_files.append(object_key)
 
         except ClientError as e:
-            logging.error(e)
+            logger.error(e)
 
         return downloaded_files
 
@@ -4165,7 +4165,7 @@ class CloudBucketManager:
             # confirm that file.key is correctly structure as [0] model name, and [1] model component
             if len(name_parts) == 2:
 
-                logging.info("update: identified models in model_repo: %s ", name_parts)
+                logger.info(f"update: identified models in model_repo: {name_parts}")
 
                 if name_parts[0] and name_parts[1]:
 
@@ -4175,12 +4175,13 @@ class CloudBucketManager:
                         os.mkdir(model_folder)
                         models_retrieved.append(name_parts[0])
 
-                    logging.info("update: downloading file from s3 bucket - %s - %s ", name_parts[1], file.key)
+                    logger.info(f"update: downloading file from s3 bucket - "
+                                f"{name_parts[1]} - {file.key}")
 
                     s3.download_file(aws_repo_bucket, file.key, os.path.join(model_folder,name_parts[1]))
 
-        logging.info("update: created local model repository - # of models - %s - model list - %s ",
-                     len(models_retrieved), models_retrieved)
+        logger.info(f"update: created local model repository - {len(models_retrieved)} models retrieved - "
+                    f" model list - {models_retrieved}")
 
         return models_retrieved
 
@@ -4223,8 +4224,8 @@ class CloudBucketManager:
                     local_file_path = os.path.join(local_model_folder,file.key.split('/')[-1])
                     bucket.download_file(file.key, local_file_path)
 
-        logging.info("update: successfully downloaded model - %s -  from aws s3 bucket for future access",
-                     model_name)
+        logger.info(f"update: successfully downloaded model - {model_name} - "
+                    f"from aws s3 bucket for future access")
 
         return files
 
@@ -4265,7 +4266,7 @@ class CloudBucketManager:
                         break
 
         except:
-            logging.error("error: could not connect to s3 bucket - % ", user_bucket_name)
+            logger.error(f"error: could not connect to s3 bucket - {user_bucket_name}")
 
             return files_copied
 
@@ -4362,7 +4363,7 @@ class ParserState:
                 output.append(new_row)
 
         except:
-            logging.info("warning: ParserState - could not find previous parse job record - %s ", prompt_id)
+            logger.warning(f"update: ParserState - could not find previous parse job record - {prompt_id}")
             output = []
 
         return output
@@ -4479,7 +4480,7 @@ class PromptState:
                 output = self.prompt.interaction_history
 
         except:
-            logging.info("update: PromptState - could not find previous prompt interaction state- %s ", prompt_id)
+            logger.warning(f"update: PromptState - could not find previous prompt interaction state- {prompt_id}")
             output = None
 
         return output
@@ -4499,7 +4500,7 @@ class PromptState:
                 new_row = json.loads(lines)
                 output.append(new_row)
         except:
-            logging.info("warning: PromptState - could not find previous prompt interaction state- %s ", prompt_id)
+            logger.warning(f"warning: PromptState - could not find previous prompt interaction state- {prompt_id}")
             output = []
 
         return output
@@ -4660,7 +4661,7 @@ class PromptState:
                 new_entry = {"prompt_id": prompt_id, "prompt_fn": x}
                 available_states.append(new_entry)
 
-        logging.info("update: PromptState - available states - ", available_states)
+        logger.info(f"update: PromptState - available states - {available_states}")
 
         return available_states
 
@@ -4846,7 +4847,7 @@ class QueryState:
                 new_entry = {"query_id": query_id, "query_fn": x}
                 available_states.append(new_entry)
 
-        logging.info("update: QueryState - available saved query states - ", available_states)
+        logger.info(f"update: QueryState - available saved query states - {available_states}")
 
         return available_states
 
@@ -4881,7 +4882,7 @@ class QueryState:
                         query_history.append(new_row["query"])
 
         except:
-            logging.info("warning: QueryState - could not find previous query state- %s ", query_id)
+            logger.warning(f"update: QueryState - could not find previous query state- {query_id}")
             output = []
 
         self.query.results = output
@@ -4917,7 +4918,7 @@ class QueryState:
         """ Prepares a csv report that can be extracted to a spreadsheet """
 
         if not self.query:
-            logging.error("error: QueryState - report generation - must load a current query")
+            logger.error("error: QueryState - report generation - must load a current query")
             return -1
 
         query_name = ""
@@ -5012,8 +5013,8 @@ class StateResourceUtil:
                 if sys.getsizeof(cfile[z]) < max_csv_size:
                     c.writerow(cfile[z])
                 else:
-                    logging.error("error:  CSV ERROR:   Row exceeds MAX SIZE: %s %s", sys.getsizeof(cfile[z])
-                                  ,cfile[z])
+                    logger.error(f"error:  CSV ERROR:   Row exceeds MAX SIZE: "
+                                 f"{sys.getsizeof(cfile[z])} - {cfile[z]}")
 
         csvfile.close()
 

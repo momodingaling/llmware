@@ -1,5 +1,20 @@
+
+# Copyright 2023-2024 llmware
+
+# Licensed under the Apache License, Version 2.0 (the "License"); you
+# may not use this file except in compliance with the License.  You
+# may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.  See the License for the specific language governing
+# permissions and limitations under the License.
+
 """The agents module implements the two classes LLMfx and SQLTables, where LLMfx manages
-Structured Language Instruction Models (SLIMs), the agents and SQLTables handels
+Structured Language Instruction Models (SLIMs), the agents and SQLTables handles
 creating and accessing external SQL data. LLmfx currently only supports SLIM models, other model
 classes will be added over time. And SQLTables is an experimantal feature for creating and accessing SQLite.
 
@@ -17,14 +32,19 @@ import sqlite3
 import json
 
 from llmware.models import ModelCatalog, _ModelRegistry
-from llmware.util import CorpTokenizer
+from llmware.util import CorpTokenizer, AgentWriter
 from llmware.configs import SQLiteConfig
 from llmware.exceptions import ModelNotFoundException
 from llmware.resources import CustomTable
+from llmware.configs import LLMWareConfig
+
+logger = logging.getLogger(__name__)
+logger.setLevel(level=LLMWareConfig().get_logging_level_by_module(__name__))
 
 
 class LLMfx:
-    """Provides an interface to models to interact with text, e.g. to first perform named entity recogintion
+
+    """Provides an interface to models to interact with text, e.g. to first perform named entity recognition
     (ner) and then answer a question you want to have answered.
 
     ``LLMfx`` provides a high-level orchestration abstraction that implements multi-model, multi-step processes
@@ -38,8 +58,8 @@ class LLMfx:
         Sets the API key that used by the ``ModelCatalog`` to load models and logs.
 
     verbose : bool, optional, default=True
-        Sets whether ``print`` statements should be executed or not, e.g. if ```verbose=True```, then new
-        events that are written to the journal are printed to stdout.
+        Sets whether ``agent_writer.write`` statements should be executed or not, e.g. if ```verbose=True```, then new
+        events that are written to the journal are written to stdout.
 
     analyze_mode : bool, optional, default=True
         Sets whether logits should be retrieved when a tool is called with ``exec_function_call``.
@@ -49,26 +69,20 @@ class LLMfx:
     llmfx : LLMfx
         A new ``LLMfx`` object.
 
-    Examples
-    ----------
-    >>> import llmware.agents
-    >>> llmware_agent = llmare.agents.LLMfx()
-    >>> llmware_agent.load_work(
-        'My name is Michael Jones, and I am a long-time customer. '
-        'The Mixco product is not working currently, and it is having a negative impact '
-        'on my business, as we can not deliver our products while it is down. '
-        'This is the fourth time that I have called.  My account number is 93203, and '
-        'my user name is mjones. Our company is based in Tampa, Florida.')
-    >>> llmware_agent.exec_function_call('ratings')
-    >>> llmware_agent.answer('What is a short shummary?', key='summary')
-    >>> llmware_agent.answer('What is the customer\'s account number and user name?', key='customer_info')
-    >>> llmware_agent.show_report()
     """
 
     def __init__(self, api_key=None, verbose=True, analyze_mode=True): 
 
+        self.agent_writer = AgentWriter()
+
+        if self.agent_writer.mode == "file":
+            logger.info(f"update: AgentWriter mode set to file - writing agent work process to: "
+                         f"{os.path.join(self.agent_writer.fp_base, self.agent_writer.fn)}"
+                         f"\nTo change file: `LLMWareConfig().set_agent_file('new_file_name.txt')`"
+                         f"\nTo change to screen: `LLMWareConfig().set_agent_log('screen')")
+
         if verbose:
-            print("update: Launching LLMfx process")
+            self.agent_writer.write("update: Launching LLMfx process")
 
         self._supported_tools = _ModelRegistry().get_llm_fx_tools_list()
         self._default_tool_map = _ModelRegistry().get_llm_fx_mapping()
@@ -500,7 +514,7 @@ class LLMfx:
         self.step += 1
 
         if self.verbose:
-            print(f"step - \t{str(self.step)} - \t{journal_update}")
+            self.agent_writer.write(f"step - \t{str(self.step)} - \t{journal_update}")
 
         return True
 
@@ -890,6 +904,33 @@ class LLMfx:
 
         return self.exec_function_call("nli", text=context, params=params)
 
+    def q_gen(self, text=None, params=None):
+
+        """ Executes a question-gen function call on a text, if passed directly, or will pull current work item from
+        the queue.  Returns value output dictionary with the generated question.  """
+
+        if not params:
+            params = ["question"]
+
+        if isinstance(params, str):
+            params = [params]
+
+        return self.exec_function_call("q_gen", text=text, params=params)
+
+    def qa_gen(self, text=None, params=None):
+
+        """ Executes a question-answer gen function call on a text, if passed directly, or will pull current work
+        item from the queue.  Returns value output dictionary with two keys - "question" and "answer" generated. """
+
+        if not params:
+            # default parameter key
+            params = ["question, answer"]
+
+        if isinstance(params, str):
+            params = [params]
+
+        return self.exec_function_call("qa_gen", text=text, params=params)
+
     def verify_llm_response(self, input_context, llm_response):
 
         """ Utility function to apply NLI to compare llm_response with the input context. """
@@ -1261,7 +1302,7 @@ class LLMfx:
             output = json.loads(output_raw.text)
             if "logits" in output:
                 logits = ast.literal_eval(output["logits"])
-                print("logits: ", logits)
+                self.agent_writer.write(f"logits: {logits}")
                 output["logits"] = logits
             if "output_tokens" in output:
                 ot_int = [int(x) for x in output["output_tokens"]]
@@ -1272,7 +1313,7 @@ class LLMfx:
             logging.warning("warning: api inference was not successful")
             output = {}
 
-        print(f"TEST: executed Agent call over API endpoint - {model_name} - {function} - {output}")
+        self.agent_writer.write(f"TEST: executed Agent call over API endpoint - {model_name} - {function} - {output}")
 
         return output
 
@@ -1334,7 +1375,6 @@ class SQLTables:
         column_info = self.conn.cursor().execute(sql_query_pragma)
 
         for entries in column_info:
-            # print("pragma - columns info output - ", entries)
             column_names.append(entries[1])
 
         return column_names
@@ -1513,8 +1553,6 @@ class SQLTables:
 
         new_record = ""
         for i in range(1, len(output)):
-
-            # print("update: inserting new record - ", i, output[i])
 
             self.insert_new_row(table_name,column_names,output[i])
 

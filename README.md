@@ -23,6 +23,8 @@ Most of our examples can be run without a GPU server - get started right away on
 New to RAG?  [Check out the Fast Start video series](https://www.youtube.com/playlist?list=PL1-dn33KwsmD7SB9iSO6vx4ZLRAWea1DB)  
 
 🔥🔥🔥 [**Multi-Model Agents with SLIM Models**](examples/SLIM-Agents/) - [**Intro-Video**](https://www.youtube.com/watch?v=cQfdaTcmBpY) 🔥🔥🔥   
+
+[Intro to SLIM Function Call Models](https://github.com/llmware-ai/llmware/blob/main/examples/Models/using_function_calls.py)  
 Can't wait?  Get SLIMs right away:  
 
 ```python 
@@ -627,7 +629,9 @@ if __name__ == "__main__":
 
 ## 🌱 Getting Started
 
-**Step 1 - Install llmware** -  `pip3 install llmware `
+**Step 1 - Install llmware** -  `pip3 install llmware` or `pip3 install 'llmware[full]'`  
+
+- note: starting with v0.3.0, we provide options for a [core install](https://github.com/llmware-ai/llmware/blob/main/llmware/requirements.txt) (minimal set of dependencies) or [full install](https://github.com/llmware-ai/llmware/blob/main/llmware/requirements_extras.txt) (adds to the core with wider set of related python libraries).  
 
 <details>
 <summary><b>Step 2- Go to Examples</b> - Get Started Fast with 100+ 'Cut-and-Paste' Recipes </summary>
@@ -689,6 +693,31 @@ Check out:  [llmware examples](https://github.com/llmware-ai/llmware/blob/main/e
 
 
 </details>  
+
+## ✍️ Working with the llmware Github repository  
+
+The llmware repo can be pulled locally to get access to all the examples, or to work directly with the latest version of the llmware code.  
+
+```bash
+git clone git@github.com:llmware-ai/llmware.git
+```  
+
+We have provided a **welcome_to_llmware** automation script in the root of the repository folder.  After cloning:  
+- On Windows command line:  `.\welcome_to_llmware_windows.sh`  
+- On Mac / Linux command line:  `sh ./welcome_to_llmware.sh`  
+
+Alternatively, if you prefer to complete setup without the welcome automation script, then the next steps include:  
+
+1.  **install requirements.txt** - inside the /llmware path - e.g., ```pip3 install -r llmware/requirements.txt```  
+
+2.  **install requirements_extras.txt** - inside the /llmware path - e.g., ```pip3 install -r llmware/requirements_extras.txt```  (Depending upon your use case, you may not need all or any of these installs, but some of these will be used in the examples.)  
+
+3.  **run examples** - copy one or more of the example .py files into the root project path.   (We have seen several IDEs that will attempt to run interactively from the nested /example path, and then not have access to the /llmware module - the easy fix is to just copy the example you want to run into the root path).  
+
+4.  **install vector db** - no-install vector db options include milvus lite, chromadb, faiss and lancedb - which do not require a server install, but do require that you install the python sdk library for that vector db, e.g., `pip3 install pymilvus`, or `pip3 install chromadb`.  If you look in [examples/Embedding](https://github.com/llmware-ai/llmware/tree/main/examples/Embedding), you will see examples for getting started with various vector DB, and in the root of the repo, you will see easy-to-get-started docker compose scripts for installing milvus, postgres/pgvector, mongo, qdrant, neo4j, and redis.  
+
+5.  Note:  we have seen recently issues with Pytorch==2.3 on some platforms - if you run into any issues, we have seen that uninstalling Pytorch and downleveling to Pytorch==2.1 usually solves the problem.  
+
 
 ## Data Store Options
 
@@ -757,27 +786,7 @@ curl -o docker-compose.yaml https://raw.githubusercontent.com/llmware-ai/llmware
 
 LLMWare is an open platform and supports a wide range of open source and proprietary models.  To use LLMWare, you do not need to use any proprietary LLM - we would encourage you to experiment with [SLIM](https://www.huggingface.co/llmware/), [BLING](https://huggingface.co/llmware), [DRAGON](https://huggingface.co/llmware), [Industry-BERT](https://huggingface.co/llmware), the GGUF examples, along with bringing in your favorite models from HuggingFace and Sentence Transformers. 
 
-If you would like to use a proprietary model, you will need to provide your own API Keys.   API keys and secrets for models, aws, and pinecone can be set-up for use in environment variables or passed directly to method calls. 
-
-
-## ✍️ Working with the llmware Github repository
-
-The llmware repo can be pulled locally to get access to all the examples, or to work directly with the latest version of the llmware code.
-
-```bash
-git clone git@github.com:llmware-ai/llmware.git
-```
-
-After cloning the repo, depending upon your IDE enviroment, you may need to take these additional steps:  
-1.  **install requirements.txt** - inside the /llmware path - e.g., ```pip3 install -r llmware/requirements.txt```   (If you copy the requirements.txt file into the root of the project folder, then many IDEs will auto install the requirements and/or you can then run the canonical `pip3 install -r requirements.txt`)   
-2.  **run examples** - copy the example .py file into the root project path.   (We have seen several IDEs that will attempt to run interactively from the nested /example path, and then not have access to the /llmware module.  We will look into fixing this with a small automation script, but for now, the easy fix is to just copy the example you want to run into the root path).  
-3.  **install vector db** - to use a vector db, you will need to separately install the python library for that vector db, e.g., `pip3 install pymilvus`, or `pip3 install chromadb`.  
-4.  Note:  we have seen recently issues with Pytorch==2.3 on some platforms - if you run into any issues, we have seen that uninstalling Pytorch and downleveling to Pytorch==2.1 usually solves the problem.  
-
-As an alternative, we have provided a **welcome_to_llmware** automation script in the root of the repository folder.  After cloning:  
-- On Windows command line:  `.\welcome_to_llmware_windows.sh`  
-- On Mac / Linux command line:  `sh ./welcome_to_llmware.sh`  
-
+If you would like to use a proprietary model, you will need to provide your own API Keys.   API keys and secrets for models, aws, and pinecone can be set-up for use in environment variables or passed directly to method calls.  
 
 <details>  
     
@@ -804,6 +813,21 @@ Questions and discussions are welcome in our [github discussions](https://github
 
 See also [additional deployment/install release notes in wheel_archives](https://github.com/llmware-ai/llmware/tree/main/wheel_archives)   
 
+**Thursday, June 6 - v0.3.1-WIP**  
+- Added module 3 to Fast Start example series [examples 7-9 on Agents & Function Calls](https://github.com/llmware-ai/llmware/tree/main/fast_start)  
+- Added reranker Jina model for in-memory semantic similarity RAG - see [example](https://github.com/llmware-ai/llmware/tree/main/examples/Embedding/using_semantic_reranker_with_rag.py)  
+- Changes merged into main branch - expected next pypi release at end of week   
+
+**Tuesday, June 4 - v0.3.0**  
+- Added support for new Milvus Lite embedded 'no-install' database - see [example](https://github.com/llmware-ai/llmware/tree/main/examples/Embedding/using_milvus_lite.py).   
+- Added two new SLIM models to catalog and agent processes - ['q-gen'](https://github.com/llmware-ai/llmware/tree/main/examples/SLIM-Agents/using-slim-q-gen.py) and ['qa-gen'](https://github.com/llmware-ai/llmware/tree/main/examples/SLIM-Agents/using-slim-qa-gen.py)    
+- Updated model class instantiation to provide more extensibility to add new classes in different modules  
+- New welcome_to_llmware.sh and welcome_to_llmware_windows.sh fast install scripts  
+- Enhanced Model class base with new configurable post_init and register methods  
+- Created InferenceHistory to track global state of all inferences completed  
+- Multiple improvements and updates to logging at module level  
+- Note: starting with v0.3.0, pip install provides two options - a base minimal install `pip3 install llmware` which will support most use cases, and a larger install `pip3 install 'llmware[full]'` with other commonly-used libraries.  
+  
 **Wednesday, May 22 - v0.2.15**  
 - Improvements in Model class handling of Pytorch and Transformers dependencies (just-in-time loading, if needed)  
 - Expanding API endpoint options and inference server functionality - see new [client access options](https://github.com/llmware-ai/llmware/tree/main/examples/Use_Cases/llmware_inference_api_client.py)  and [server_launch](https://github.com/llmware-ai/llmware/tree/main/examples/Use_Cases/llmware_inference_server.py)  
@@ -883,10 +907,6 @@ See also [additional deployment/install release notes in wheel_archives](https:/
 - SLIM model keys and output_values now accessible in ModelCatalog.  
 - Updating encodings to 'utf-8-sig' to better handle txt/csv files with bom.  
 
-**Reported notable issues on priority resolution path**  
-- older linux versions with GLIBC < 2.31   
-- 3.12 python support - waiting on one last dependency (coming soon)
-  
 **Supported Operating Systems**: MacOS (Metal and x86), Linux (x86 and aarch64), Windows  
 - note on Linux: we test most extensively on Ubuntu 22 and now Ubuntu 20 and recommend where possible  
 - if you need another Linux version, please raise an issue - we will prioritize testing and ensure support.  

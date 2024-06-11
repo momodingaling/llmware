@@ -1,23 +1,27 @@
 
 
-Fast Start: Learning RAG with llmware through 6 examples 
+Fast Start: Learning RAG with llmware through examples  
 ===============
 
 **Welcome to llmware!**    
 
 Set up  
 
-`pip3 install llmware` or, if you prefer clone the github repo locally, e.g., `git clone git@github.com:llmware-ai/llmware.git
-`.   
+`pip3 install llmware` or `pip3 install 'llmware[full]'` or, if you prefer clone the github repo locally, e.g., `git clone git@github.com:llmware-ai/llmware.git`.  If you clone the repo, then we would recommend that you run the `welcome_to_llmware.sh` or `welcome_to_llmware_windows.sh` scripts to install all of the dependencies.    
 
-Platforms: 
+Note: starting in llmware>=0.3.0, we offer two pip install options.  If you use the standard `pip3 install llmware`, then you will need to add a few additional pip3 installs to run examples 2 and 5 below, specifically:  
+
+  `pip3 install torch`  
+  `pip3 install transformers`  
+
+Platforms:  
 - Mac M1/M2/M3, Windows, Linux (Ubuntu 20 or Ubuntu 22 preferred)  
 - RAM: 16 GB minimum  
-- Python 3.9, 3.10, 3.11 (note: not supported on 3.12 - coming soon!)  
-- Pull the latest version of llmware == 0.2.11 (as of end of April 2024)  
+- Python 3.9, 3.10, 3.11, 3.12 
+- Pull the latest version of llmware == 0.3.0 (as of early June 2024)  
 - Please note that we have updated the examples from the original versions, to use new features in llmware, so there may be minor differences with the videos, which are annotated in the comments in each example.    
   
-There are 6 examples, designed to be used step-by-step, but each is self-contained,  
+There are 9 examples, designed to be used step-by-step, but each is self-contained,  
 so you can feel free to jump into any of the examples, in any order, that you prefer.  
 
 Each example has been designed to be "copy-paste" and RUN with lots of helpful comments and explanations embedded in the code samples.  
@@ -40,29 +44,42 @@ Examples:
 5.  **RAG with Semantic Query** - use natural language queries on documents and integrate with prompts.  [Video](https://youtu.be/XT4kIXA9H3Q?si=EBCAxVXBt5vgYY8s)
     
 6.  **RAG with more complex retrieval** - start integrating more complex retrieval patterns.  [Video](https://youtu.be/G1Q6Ar8THbo?si=vIVAv35uXAcnaUJy)  
-   
-After completing these 6 examples, you should have a good foundation and set of recipes to start 
+
+**Section III - Function Calls & Agents**  
+
+7.  **Function Calls** - move beyond 'question-answer' prompting and start prompting with function calls.  
+
+8.  **Agents** - the power of function calls is the ability to integrate model function calls as 'tools' available to an agent orchestrator.  [Video](https://youtu.be/cQfdaTcmBpY?si=pMWQj0qpPBVRmm34)  
+
+9.  **Function Calls with Web Services** - one of the most exciting use cases is the ability to combine function calls with web services.   [Video](https://youtu.be/l0jzsg1_Ik0?si=ifwxVi_Z6I_hNtcf)  
+
+After completing these 9 examples, you should have a good foundation and set of recipes to start 
 exploring the other 100+ examples in the /examples folder, and build more sophisticated 
-LLM-based applications.
+LLM-based applications.  
 
 **Models**  
-  - All of these examples are optimized for using local CPU-based models, primarily BLING and DRAGON.
+  - All of these examples are optimized for using local CPU-based models, primarily BLING, DRAGON and SLIM models.   
   - If you want to substitute for any other model in the catalog, it is generally as easy as 
     switching the model_name.  If the model requires API keys, we show in the examples how to pass those keys as an
-    environment variable.
+    environment variable.  
 
 **Collection Databases**  
   - Our parsers are optimized to index text chunks directly into a persistent data store.   
-  - For Fast Start, we will use "sqlite" which is an embedded database, requiring no install
-  - For more scalable deployment, we would recommend either "mongo" or "postgres"
-  - Install instructions for "mongo" and "postgres" are provided in docker-compose files in the repository
+  - For Fast Start, we will use "sqlite" which is an embedded database, requiring no install  
+  - For more scalable deployment, we would recommend either "mongo" or "postgres"  
+  - Install instructions for "mongo" and "postgres" are provided in docker-compose files in the repository  
 
 **Vector Databases**  
-   - For Fast Start, we will use "chromadb" in persistent 'file' mode, requiring no install.  
-   - Note: if you are using Python < 3.12, then please feel free to substitute for faiss (which was used in the videos).  
-   - Note: depending upon how and when you installed llmware, you may need to `pip install chromadb`.  
+   - For Fast Start, we will use a no-install vector db (in Examples 2 and 5 specifically).  
+   - There are 4 no-install options supported, but depending upon your enviroment, you may need to pip3 install the corresponding vector db python sdk, eg.:  
+     
+     - chromadb:  `pip3 install chromadb`  
+     - milvus lite: `pip3 install pymilvus`  (Mac and Linux only)  
+     - faiss: `pip3 install faiss`   
+     - lancedb: `pip3 install lancedb`  
+       
    - For more scalable deployment, we would recommend installing one of 9 supported vector databases, 
-     including Milvus, PGVector (Postgres), Redis, Qdrant, Neo4j, Mongo-Atlas, Chroma, LanceDB, or Pinecone.  
+     including Milvus, PGVector (Postgres), Redis, Qdrant, Neo4j, Mongo-Atlas, Chroma, LanceDB, or Pinecone.   
    - Install instructions provided in "examples/Embedding" for specific db, as well as docker-compose scripts.  
 
 **Local Private**
